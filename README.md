@@ -1,5 +1,6 @@
-MooDeng Adventure Game 🎮
-Live Demo
+MooDeng Adventure Game 
+
+Live Demo🎮:
 
 You can play the game live at: [MooDeng Run](https://por25528.github.io/MoodengRun/)
 
