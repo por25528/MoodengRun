@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title></title>
+</head>
+<body>
+    <script type="module">
+        import kaboom from "https://unpkg.com/kaboom@3000.0.1/dist/kaboom.mjs";
+
+        const FLOOR_HEIGHT = 300;
+        const JUMP_FORCE = 1600;
+        const SPEED = 900;
+        const MAX_HEALTH = 5;
+        const INITIAL_SPAWN_DELAY = 3;
+        const MIN_SPAWN_DELAY = 0.7;
+        const INITIAL_HEALING_DELAY = 3;
+        const MIN_HEALING_DELAY = 1;
+
+        kaboom();
+
+        let isDropping = false;
+        let obstacles = [];
+        let enemies = [];
+
+        loadSprite("moodeng", "sprites/MooDeng.png");
+        loadSprite("human1", "sprites/Human1.png");
+        loadSprite("human2", "sprites/Human2.png");
+        loadSprite("humanfloat", "sprites/Humanfloat1.png");
+        loadSprite("spike", "sprites/spike.png");
+        loadSprite("heart", "sprites/heart.png");
+        loadSprite("water", "sprites/water.png");
+        loadSprite("background", "sprites/Background.png");
+        loadSound("jump", "sounds/jump.mp3");
+        loadSound("lose", "sounds/lose.mp3");
+        loadSound("heal", "sounds/heal.mp3");
+        loadSound("damage", "sounds/damage.mp3");
+        
+        
+
+        scene("game", () => {
+            setGravity(2400);
+
+            add([
+                sprite("background"),
+                pos(0, 0),
+                scale(width() / 320, height() / 240),
+            ]);
+
+            const player = add([
+                sprite("moodeng"),
+                pos(40, 40),
+                area(),
+                body(),
+                scale(0.5),
+            ]);
+
+            let health = MAX_HEALTH;
+            let canJump = true;
+
+            function updateHealthDisplay() {
+                // Destroy old hearts
+                for (let h of healthLabel) {
+                    destroy(h);
+                }
+                healthLabel = [];
+
+                // Rebuild health display
+                for (let i = 0; i < health; i++) {
+                    healthLabel.push(
+                        add([
+                            sprite("heart"),
+                            pos(width() / 2 - (MAX_HEALTH * 12) / 2 + i * 24, 24),
+                            scale(0.3),
+                        ])
+                    );
+                }
+            }
+
+            let healthLabel = [];
+            updateHealthDisplay();
+
+            add([
+                rect(width(), FLOOR_HEIGHT),
+                outline(4),
+                pos(0, height()),
+                anchor("botleft"),
+                area(),
+                body({ isStatic: true }),
+                color(0, 255, 0),
+                outline(4, color(0, 100, 0)),
+            ]);
+
+            // Tap events for jumping and falling
+            onClick(() => {
+                if (player.isGrounded()) {
+                    player.jump(JUMP_FORCE);
+                    play("jump");
+                } else {
+                    if (!isDropping) {
+                        isDropping = true;
+                        const originalGravity = getGravity();
+                        setGravity(20000);
+                        player.jump(-player.pos.y);  // Force player to fall
+                        player.onGround(() => {
+                            setGravity(originalGravity);
+                            isDropping = false;
+                        });
+                    }
+                }
+            });
+
+            player.onGround(() => {
+                canJump = true;
+            });
+
+            let spawnDelay = INITIAL_SPAWN_DELAY;
+            let healingDelay = INITIAL_HEALING_DELAY;
+
+            // **New Obstacles**
+            function spawnObstacle() {
+                const obstacleType = rand() < 0.5 ? "spike" : "human";
+                if (obstacleType === "spike") {
+                    // Prevent spike from spawning too close to enemies
+                    let safeToSpawn = true;
+                    for (let enemy of enemies) {
+                        if (enemy.pos.x < width() && enemy.pos.x > width() - 200) {
+                            safeToSpawn = false;
+                            break;
+                        }
+                    }
+
+                    if (safeToSpawn) {
+                        obstacles.push(
+                            add([
+                                sprite("spike"),
+                                pos(width(), height() - FLOOR_HEIGHT - 50),
+                                area(),
+                                move(LEFT, SPEED),
+                                offscreen({ destroy: true }),
+                                "spike",
+                                scale(2),
+                            ])
+                        );
+                    }
+                }
+                wait(spawnDelay, spawnObstacle);  // Ensure obstacles keep spawning
+            }
+
+            // Enemies
+            function spawnRandomEnemy() {
+                const enemyType = rand() < 0.5 ? "human" : "floating";
+                if (enemyType === "human") {
+                    const humanSprite = rand() < 0.5 ? "human1" : "human2";
+                    const enemy = add([
+                        sprite(humanSprite),
+                        area(),
+                        outline(4),
+                        pos(width(), height() - FLOOR_HEIGHT),
+                        anchor("botleft"),
+                        move(LEFT, SPEED),
+                        offscreen({ destroy: true }),
+                        "human",
+                        scale(2),
+                    ]);
+                    enemies.push(enemy);
+                } else {
+                    const floatingEnemy = add([
+                        sprite("humanfloat"),
+                        area(),
+                        pos(width(), rand(40, 100)),
+                        move(LEFT, SPEED),
+                        offscreen({ destroy: true }),
+                        "floating",
+                        scale(1.5),
+                    ]);
+                    enemies.push(floatingEnemy);
+                }
+                wait(spawnDelay, spawnRandomEnemy);
+            }
+
+            // Healing Items (with slightly increased spawn rate)
+            function spawnHealingItem() {
+                if (rand() < 0.10) {  // Increased chance from 0.05 to 0.10
+                    const healingItem = add([
+                        sprite("water"),
+                        pos(width(), rand(height() - FLOOR_HEIGHT - 250, height() - FLOOR_HEIGHT - 100)),
+                        area(),
+                        move(LEFT, SPEED),
+                        offscreen({ destroy: true }),
+                        "healing",
+                        scale(3),
+                    ]);
+                    wait(healingDelay, spawnHealingItem);
+                } else {
+                    wait(1, spawnHealingItem);
+                }
+            }
+
+            // Start spawning enemies, obstacles, and healing items independently
+            spawnRandomEnemy();
+            spawnObstacle();  // Now spikes can spawn independently of enemies
+            spawnHealingItem();
+
+            player.onCollide("human", () => {
+                play("damage");
+                health--;
+                updateHealthDisplay();
+                if (health <= 0) {
+                    play("lose");
+                    go("lose", score);
+                }
+            });
+
+            player.onCollide("floating", () => {
+                play("damage");
+                health--;
+                updateHealthDisplay();
+                if (health <= 0) {
+                    play("lose");
+                    go("lose", score);
+                }
+            });
+
+            player.onCollide("healing", (healingItem) => {
+                play("heal");
+                health = Math.min(health + 1, MAX_HEALTH);
+                updateHealthDisplay();
+                destroy(healingItem);
+            });
+
+            player.onCollide("spike", () => {
+                play("damage");
+                health--;
+                updateHealthDisplay();
+                if (health <= 0) {
+                    play("lose");
+                    go("lose", score);
+                }
+            });
+
+            let score = 0;
+
+            const scoreLabel = add([
+                text(score, { size: 32, font: "bold" }),
+                pos(width() - 80, 24),
+            ]);
+
+            onUpdate(() => {
+                score++;
+                scoreLabel.text = score;
+
+                if (spawnDelay > MIN_SPAWN_DELAY) {
+                    spawnDelay -= 0.0005;
+                }
+
+                if (healingDelay > MIN_HEALING_DELAY) {
+                    healingDelay -= 0.0005;
+                }
+            });
+        });
+
+        scene("lose", (score) => {
+            add([
+                sprite("background"),  // Add background for lose screen
+                pos(0, 0),
+                scale(width() / 320, height() / 240),
+            ]);
+
+            add([
+                sprite("moodeng"),
+                pos(width() / 2, height() / 2 - 64),
+                scale(2),
+                anchor("center"),
+            ]);
+
+            add([
+                text("Score: " + score),
+                pos(width() / 2, height() / 2 + 64),
+                scale(2),
+                anchor("center"),
+            ]);
+
+            onKeyPress("space", () => go("game"));
+            onClick(() => go("game"));
+        });
+
+        go("game");
+    </script>
+</body>
+</html>
