@@ -5,7 +5,7 @@ You can play the game live at: [MooDeng Run](https://por25528.github.io/MoodengR
 
 Project Overview
 
-This project is a side-scrolling platformer game built using Kaboom.js. The player controls MooDeng, a character navigating through obstacles, enemies, and collecting water hose.
+This project is a simple side-scrolling platformer game built using Kaboom.js for learning purposes. The player controls MooDeng, a character navigating through obstacles, enemies, and collecting water hoses.
 
     Jump and Fall Mechanics: Tap to jump when on the ground and tap to fall when in the air for improved control and mobility.
     Obstacle and Enemy Avoidance: Avoid spikes and enemies (both grounded and floating) as you progress through the game.
