@@ -1,4 +1,8 @@
 MooDeng Adventure Game 🎮
+Live Demo
+
+You can play the game live at: [MooDeng Run](https://por25528.github.io/MoodengRun/)
+
 Project Overview
 
 This project is a side-scrolling platformer game built using Kaboom.js. The player controls MooDeng, a character navigating through obstacles, enemies, and collecting water hose.
