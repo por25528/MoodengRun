@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title></title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Game</title>
 </head>
 <body>
     <script type="module">
@@ -18,91 +18,96 @@
         const INITIAL_HEALING_DELAY = 3;
         const MIN_HEALING_DELAY = 1;
 
-        kaboom();
+        kaboom({
+            width: window.innerWidth, 
+            height: window.innerHeight, 
+            scale: 1, 
+        });
 
         let isDropping = false;
         let obstacles = [];
         let enemies = [];
 
+        const responsiveScale = Math.min(width() / 1920, height() / 1080); 
+
+        loadSprite("heart", "sprites/heart.png");
+        loadSprite("water", "sprites/Water.png");
+        loadSprite("background", "sprites/Wallpaper.png");
         loadSprite("moodeng", "sprites/MooDeng.png");
         loadSprite("human1", "sprites/Human1.png");
         loadSprite("human2", "sprites/Human2.png");
         loadSprite("humanfloat", "sprites/Humanfloat1.png");
         loadSprite("spike", "sprites/spike.png");
-        loadSprite("heart", "sprites/heart.png");
-        loadSprite("water", "sprites/water.png");
-        loadSprite("background", "sprites/Background.png");
+
         loadSound("jump", "sounds/jump.mp3");
         loadSound("lose", "sounds/lose.mp3");
         loadSound("heal", "sounds/heal.mp3");
         loadSound("damage", "sounds/damage.mp3");
-        
-        
 
         scene("game", () => {
-            setGravity(2400);
+            setGravity(2400 * responsiveScale);
 
+            
             add([
-                sprite("background"),
+                sprite("background", { width: width(), height: height() }),  
                 pos(0, 0),
-                scale(width() / 320, height() / 240),
             ]);
 
             const player = add([
                 sprite("moodeng"),
-                pos(40, 40),
+                pos(40 * responsiveScale, 40 * responsiveScale),
                 area(),
                 body(),
-                scale(0.5),
+                scale(0.5 * responsiveScale), 
             ]);
 
             let health = MAX_HEALTH;
             let canJump = true;
 
             function updateHealthDisplay() {
-                // Destroy old hearts
-                for (let h of healthLabel) {
-                    destroy(h);
-                }
-                healthLabel = [];
+                    for (let h of healthLabel) {
+                        destroy(h);
+                    }
+                    healthLabel = [];
 
-                // Rebuild health display
-                for (let i = 0; i < health; i++) {
-                    healthLabel.push(
-                        add([
-                            sprite("heart"),
-                            pos(width() / 2 - (MAX_HEALTH * 12) / 2 + i * 24, 24),
-                            scale(0.3),
-                        ])
-                    );
+                    const heartGap = 45 * responsiveScale;
+
+             
+                    for (let i = 0; i < health; i++) {
+                        healthLabel.push(
+                            add([
+                                sprite("heart"),
+                                pos(50 * responsiveScale + i * (24 * responsiveScale + heartGap), 24 * responsiveScale),
+                                scale(0.3 * responsiveScale),
+                            ])
+                        );
+                    }
                 }
-            }
 
             let healthLabel = [];
             updateHealthDisplay();
 
             add([
-                rect(width(), FLOOR_HEIGHT),
-                outline(4),
+                rect(width(), FLOOR_HEIGHT * responsiveScale),
+                outline(4 * responsiveScale),
                 pos(0, height()),
                 anchor("botleft"),
                 area(),
                 body({ isStatic: true }),
                 color(0, 255, 0),
-                outline(4, color(0, 100, 0)),
+                outline(4 * responsiveScale, color(0, 100, 0)),
             ]);
 
-            // Tap events for jumping and falling
             onClick(() => {
                 if (player.isGrounded()) {
-                    player.jump(JUMP_FORCE);
+                    player.jump(JUMP_FORCE * responsiveScale);
                     play("jump");
                 } else {
                     if (!isDropping) {
                         isDropping = true;
                         const originalGravity = getGravity();
-                        setGravity(20000);
-                        player.jump(-player.pos.y);  // Force player to fall
+                        setGravity(20000 * responsiveScale);
+                        player.jump(-player.pos.y);
                         player.onGround(() => {
                             setGravity(originalGravity);
                             isDropping = false;
@@ -118,14 +123,12 @@
             let spawnDelay = INITIAL_SPAWN_DELAY;
             let healingDelay = INITIAL_HEALING_DELAY;
 
-            // **New Obstacles**
             function spawnObstacle() {
                 const obstacleType = rand() < 0.5 ? "spike" : "human";
                 if (obstacleType === "spike") {
-                    // Prevent spike from spawning too close to enemies
                     let safeToSpawn = true;
                     for (let enemy of enemies) {
-                        if (enemy.pos.x < width() && enemy.pos.x > width() - 200) {
+                        if (enemy.pos.x < width() && enemy.pos.x > width() - 200 * responsiveScale) {
                             safeToSpawn = false;
                             break;
                         }
@@ -135,20 +138,19 @@
                         obstacles.push(
                             add([
                                 sprite("spike"),
-                                pos(width(), height() - FLOOR_HEIGHT - 50),
+                                pos(width(), height() - FLOOR_HEIGHT * responsiveScale - 50 * responsiveScale),
                                 area(),
-                                move(LEFT, SPEED),
+                                move(LEFT, SPEED * responsiveScale),
                                 offscreen({ destroy: true }),
                                 "spike",
-                                scale(2),
+                                scale(2 * responsiveScale),
                             ])
                         );
                     }
                 }
-                wait(spawnDelay, spawnObstacle);  // Ensure obstacles keep spawning
+                wait(spawnDelay, spawnObstacle);
             }
 
-            // Enemies
             function spawnRandomEnemy() {
                 const enemyType = rand() < 0.5 ? "human" : "floating";
                 if (enemyType === "human") {
@@ -156,41 +158,40 @@
                     const enemy = add([
                         sprite(humanSprite),
                         area(),
-                        outline(4),
-                        pos(width(), height() - FLOOR_HEIGHT),
+                        outline(4 * responsiveScale),
+                        pos(width(), height() - FLOOR_HEIGHT * responsiveScale),
                         anchor("botleft"),
-                        move(LEFT, SPEED),
+                        move(LEFT, SPEED * responsiveScale),
                         offscreen({ destroy: true }),
                         "human",
-                        scale(2),
+                        scale(2 * responsiveScale),
                     ]);
                     enemies.push(enemy);
                 } else {
                     const floatingEnemy = add([
                         sprite("humanfloat"),
                         area(),
-                        pos(width(), rand(40, 100)),
-                        move(LEFT, SPEED),
+                        pos(width(), rand(40 * responsiveScale, 100 * responsiveScale)),
+                        move(LEFT, SPEED * responsiveScale),
                         offscreen({ destroy: true }),
                         "floating",
-                        scale(1.5),
+                        scale(1.5 * responsiveScale),
                     ]);
                     enemies.push(floatingEnemy);
                 }
                 wait(spawnDelay, spawnRandomEnemy);
             }
 
-            // Healing Items (with slightly increased spawn rate)
             function spawnHealingItem() {
-                if (rand() < 0.10) {  // Increased chance from 0.05 to 0.10
+                if (rand() < 0.10) {
                     const healingItem = add([
                         sprite("water"),
-                        pos(width(), rand(height() - FLOOR_HEIGHT - 250, height() - FLOOR_HEIGHT - 100)),
+                        pos(width(), rand(height() - FLOOR_HEIGHT * responsiveScale - 250 * responsiveScale, height() - FLOOR_HEIGHT * responsiveScale - 100 * responsiveScale)),
                         area(),
-                        move(LEFT, SPEED),
+                        move(LEFT, SPEED * responsiveScale),
                         offscreen({ destroy: true }),
                         "healing",
-                        scale(3),
+                        scale(3 * responsiveScale),
                     ]);
                     wait(healingDelay, spawnHealingItem);
                 } else {
@@ -198,9 +199,8 @@
                 }
             }
 
-            // Start spawning enemies, obstacles, and healing items independently
             spawnRandomEnemy();
-            spawnObstacle();  // Now spikes can spawn independently of enemies
+            spawnObstacle();
             spawnHealingItem();
 
             player.onCollide("human", () => {
@@ -243,8 +243,8 @@
             let score = 0;
 
             const scoreLabel = add([
-                text(score, { size: 32, font: "bold" }),
-                pos(width() - 80, 24),
+                text(score, { size: 48 * responsiveScale, font: "bold" }), 
+                pos(width() - 150 * responsiveScale, 24 * responsiveScale), 
             ]);
 
             onUpdate(() => {
@@ -263,22 +263,23 @@
 
         scene("lose", (score) => {
             add([
-                sprite("background"),  // Add background for lose screen
+                sprite("background"),  
                 pos(0, 0),
-                scale(width() / 320, height() / 240),
+                scale(width() / 320 * responsiveScale, height() / 240 * responsiveScale), 
             ]);
 
             add([
                 sprite("moodeng"),
-                pos(width() / 2, height() / 2 - 64),
-                scale(2),
+                pos(width() / 2, height() / 2 - 64 * responsiveScale),
+                scale(2 * responsiveScale), 
                 anchor("center"),
             ]);
 
+         
             add([
                 text("Score: " + score),
-                pos(width() / 2, height() / 2 + 64),
-                scale(2),
+                pos(width() / 2, height() / 2 + 64 * responsiveScale),
+                scale(2 * responsiveScale),
                 anchor("center"),
             ]);
 
